@@ -233,14 +233,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.4.1"
-  envied:
-    dependency: "direct main"
-    description:
-      name: envied
-      sha256: f8c347589ab13bed975aa2f6f95630570aa1a358c7e6c8894686e80e4bc60b14
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.2.0"
   equatable:
     dependency: transitive
     description:
