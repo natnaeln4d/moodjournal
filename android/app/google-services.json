@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "798843828573",
+    "firebase_url": "https://pushnotifaction-2803a-default-rtdb.firebaseio.com",
+    "project_id": "pushnotifaction-2803a",
+    "storage_bucket": "pushnotifaction-2803a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:798843828573:android:a4ad3b2569bd665d66d0b4",
+        "android_client_info": {
+          "package_name": "com.moodtrackerapp.job5"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "798843828573-f6h7hh4htdq2iq46lu867ahvl57qfsoq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBz6FYWCaBEsPBz0e7mBCG-PA3uQsNob5k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "798843828573-f6h7hh4htdq2iq46lu867ahvl57qfsoq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
