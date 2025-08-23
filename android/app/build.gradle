@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.mood_tracker_app.job5"
+    namespace = "com.moodtrackerapp.job5"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
