@@ -4,8 +4,9 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // Add this line
+        classpath 'com.android.tools.build:gradle:8.3.2' // Make sure this is present
         classpath 'com.google.gms:google-services:4.4.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22" // If using Kotlin
     }
 }
 
@@ -13,6 +14,28 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+}
+
+// Move the subprojects configuration to the right place
+subprojects {
+    project.configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'com.android.support'
+                    && !details.requested.name.contains('multidex') ) {
+                details.useVersion "28.0.0"
+            }
+        }
+    }
+
+    // Apply the namespace fix for older plugins
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            android {
+                namespace = "com.whatever.${project.name}"
+                compileSdk 34
+            }
+        }
     }
 }
 
