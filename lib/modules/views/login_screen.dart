@@ -103,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           SizedBox(height: 20),
-                          Icon(
+                          const Icon(
                             Icons.psychology_alt,
                             size: 60,
                             color: Colors.purple,
