@@ -15,15 +15,14 @@ class JournalController extends GetxController {
   void onInit() {
     super.onInit();
 
-
     ever<AppUser?>(authService.user, (AppUser? user) {
       if (user != null) {
         fetchJournals();
       } else {
         journals.clear();
+        isLoading.value = false;
       }
     });
-
 
     if (authService.user.value != null) {
       fetchJournals();
@@ -46,15 +45,12 @@ class JournalController extends GetxController {
       );
 
       await docRef.set(journal.toMap());
-      journals.add(journal);
-
-      await fetchJournals();
+      await fetchJournals(); // This will refresh the list and handle loading state
 
       Get.snackbar('Success', 'Journal entry added successfully!');
     } catch (e) {
-      Get.snackbar('Error', 'Failed to add journal: $e');
-    } finally {
       isLoading.value = false;
+      Get.snackbar('Error', 'Failed to add journal: $e');
     }
   }
 
@@ -67,6 +63,7 @@ class JournalController extends GetxController {
         'updatedAt': DateTime.now().toIso8601String(),
       });
 
+      // Update local list immediately for better UX
       final index = journals.indexWhere((journal) => journal.id == id);
       if (index != -1) {
         final updatedJournal = JournalEntry(
@@ -78,7 +75,6 @@ class JournalController extends GetxController {
           updatedAt: DateTime.now(),
         );
         journals[index] = updatedJournal;
-        journals.refresh();
       }
 
       Get.snackbar('Success', 'Journal entry updated successfully!');
@@ -93,8 +89,10 @@ class JournalController extends GetxController {
     isLoading.value = true;
     try {
       await firestore.collection('journals').doc(id).delete();
+
+      // Remove from local list immediately
       journals.removeWhere((journal) => journal.id == id);
-      await reloadJournals();
+
       Get.snackbar('Success', 'Journal entry deleted successfully!');
     } catch (e) {
       Get.snackbar('Error', 'Failed to delete journal: $e');
@@ -104,7 +102,13 @@ class JournalController extends GetxController {
   }
 
   Future<void> fetchJournals() async {
+    if (authService.user.value == null) {
+      isLoading.value = false;
+      return;
+    }
+
     isLoading.value = true;
+
     try {
       final userId = authService.user.value!.id;
       final snapshot = await firestore
@@ -120,7 +124,9 @@ class JournalController extends GetxController {
       isLoading.value = false;
     }
   }
+
   Future<void> reloadJournals() async {
+    isLoading.value = false;
     await fetchJournals();
   }
 }

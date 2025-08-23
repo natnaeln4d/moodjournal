@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import '../../data/models/user_model.dart';
@@ -10,6 +11,7 @@ abstract class AuthObserver {
 class AuthService extends GetxService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final Connectivity _connectivity = Connectivity();
   final List<AuthObserver> _observers = [];
   Rx<AppUser?> user = Rx<AppUser?>(null);
 
@@ -31,9 +33,12 @@ class AuthService extends GetxService {
   void onInit() {
     _auth.authStateChanges().listen((User? firebaseUser) async {
       if (firebaseUser != null) {
-        // Get our AppUser from Firestore
-        final appUser = await _getOrCreateUser(firebaseUser);
-        user.value = appUser;
+        try {
+          final appUser = await _getOrCreateUser(firebaseUser);
+          user.value = appUser;
+        } catch (e) {
+          print('Error in authStateChanges: $e');
+        }
       } else {
         user.value = null;
       }
@@ -59,41 +64,55 @@ class AuthService extends GetxService {
       }
     } catch (e) {
       print('Error getting/creating user: $e');
-      // Fallback to creating user from Firebase data only
       return AppUser.fromFirebaseUser(firebaseUser);
     }
   }
 
-  Future<AppUser?> signUpWithEmail(String email, String password) async {
-    try {
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      if (result.user != null) {
-        return await _getOrCreateUser(result.user!);
-      }
-      return null;
-    } catch (e) {
-      print('Sign Up Error: $e');
-      rethrow;
-    }
+  Future<bool> get isConnected async {
+    final connectivityResult = await _connectivity.checkConnectivity();
+    return connectivityResult != ConnectivityResult.none;
   }
 
-  Future<AppUser?> signInWithEmail(String email, String password) async {
+  Future<void> signInWithEmail(String email, String password) async {
     try {
+      if (!await isConnected) {
+        throw Exception('No internet connection');
+      }
+
       UserCredential result = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
       if (result.user != null) {
-        return await _getOrCreateUser(result.user!);
+        final appUser = await _getOrCreateUser(result.user!);
+        user.value = appUser;
+        _notifyObservers();
       }
-      return null;
     } catch (e) {
       print('Sign In Error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> signUpWithEmail(String email, String password) async {
+    try {
+      if (!await isConnected) {
+        throw Exception('No internet connection');
+      }
+
+      UserCredential result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (result.user != null) {
+        final appUser = await _getOrCreateUser(result.user!);
+        user.value = appUser;
+        _notifyObservers();
+      }
+    } catch (e) {
+      print('Sign Up Error: $e');
       rethrow;
     }
   }
@@ -132,5 +151,7 @@ class AuthService extends GetxService {
 
   Future<void> signOut() async {
     await _auth.signOut();
+    user.value = null;
+    _notifyObservers();
   }
 }

@@ -21,6 +21,7 @@ class Assets {
   static const String modelsUserModel = 'lib/data/models/user_model.dart';
   static const String servicesApiService = 'lib/core/services/api_service.dart';
   static const String servicesAuthService = 'lib/core/services/auth_service.dart';
+  static const String servicesConnectivityService = 'lib/core/services/connectivity_service.dart';
   static const String servicesThemeService = 'lib/core/services/theme_service.dart';
   static const String utilsConnectivity = 'lib/core/utils/connectivity.dart';
   static const String utilsSecureStorage = 'lib/core/utils/secure_storage.dart';

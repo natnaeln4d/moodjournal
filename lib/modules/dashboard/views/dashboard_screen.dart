@@ -90,7 +90,25 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
   Future<void> _initializeCamera() async {
     final cameras = await availableCameras();
-    if (cameras.isNotEmpty) {
+
+
+    CameraDescription? frontCamera;
+    for (var camera in cameras) {
+      if (camera.lensDirection == CameraLensDirection.front) {
+        frontCamera = camera;
+        break;
+      }
+    }
+
+    if (frontCamera != null) {
+      _cameraController = CameraController(
+        frontCamera,
+        ResolutionPreset.medium,
+      );
+      await _cameraController!.initialize();
+      if (mounted) setState(() {});
+    } else if (cameras.isNotEmpty) {
+
       _cameraController = CameraController(
         cameras.first,
         ResolutionPreset.medium,
@@ -111,8 +129,29 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
     try {
 
-      await Future.delayed(const Duration(seconds: 2));
+      final cameras = await availableCameras();
+      CameraDescription? frontCamera;
 
+      for (var camera in cameras) {
+        if (camera.lensDirection == CameraLensDirection.front) {
+          frontCamera = camera;
+          break;
+        }
+      }
+
+
+      if (frontCamera != null &&
+          _cameraController!.description.lensDirection != CameraLensDirection.front) {
+        await _cameraController!.dispose();
+        _cameraController = CameraController(
+          frontCamera,
+          ResolutionPreset.medium,
+        );
+        await _cameraController!.initialize();
+        if (mounted) setState(() {});
+      }
+
+      await Future.delayed(const Duration(seconds: 2));
 
       final emotions = ['Happy', 'Sad', 'Neutral', 'Anxious', 'Excited'];
       final randomEmotion = emotions[DateTime.now().millisecond % emotions.length];
@@ -122,7 +161,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         _isDetectingEmotion = false;
       });
 
-      // Add emotion detection result to chat
+
       _addAssistantMessage("I detected that you're feeling $randomEmotion. Would you like to talk about it?");
 
     } catch (e) {
@@ -214,7 +253,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     TextEditingController titleController = TextEditingController();
     TextEditingController contentController = TextEditingController();
 
-    // Get the last assistant message to pre-fill the journal content
     final lastAssistantMessage = _chatMessages.isNotEmpty
         ? _chatMessages.lastWhere(
             (msg) => !msg.isUser,
@@ -222,13 +260,11 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     )
         : ChatMessage(text: "", isUser: false, timestamp: DateTime.now());
 
-    // Pre-fill with the last assistant message if it exists
     if (lastAssistantMessage.text.isNotEmpty) {
       contentController.text = "Reflecting on our conversation:\n\n";
       contentController.text += "Assistant: ${lastAssistantMessage.text}\n\n";
       contentController.text += "My thoughts: ";
 
-      // Also suggest a title based on the assistant's message
       titleController.text = _generateTitleFromMessage(lastAssistantMessage.text);
     }
 
@@ -252,96 +288,97 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                 ),
               ),
               padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Create Journal Entry',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: titleController,
-                    style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      labelText: 'Title',
-                      labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
-                      filled: true,
-                      fillColor: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.1),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.purple, width: 2),
+              child: SingleChildScrollView( // Added SingleChildScrollView here
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Create Journal Entry',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: contentController,
-                    style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      labelText: 'Content',
-                      labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
-                      filled: true,
-                      fillColor: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.1),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.purple, width: 2),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: titleController,
+                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        labelText: 'Title',
+                        labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                        filled: true,
+                        fillColor: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.1),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.purple, width: 2),
+                        ),
                       ),
                     ),
-                    maxLines: 8,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      TextButton(
-                        onPressed: () => Get.back(),
-                        child: Text('Cancel', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: contentController,
+                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        labelText: 'Content',
+                        labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                        filled: true,
+                        fillColor: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.1),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.purple, width: 2),
+                        ),
                       ),
-                      ElevatedButton(
-                        onPressed: () {
-                          if (titleController.text.isEmpty || contentController.text.isEmpty) {
+                      maxLines: 8,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        TextButton(
+                          onPressed: () => Get.back(),
+                          child: Text('Cancel', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (titleController.text.isEmpty || contentController.text.isEmpty) {
+                              Get.snackbar(
+                                'Error',
+                                'Please fill all fields',
+                                snackPosition: SnackPosition.BOTTOM,
+                                backgroundColor: Colors.red,
+                                colorText: Colors.white,
+                              );
+                              return;
+                            }
+                            _journalController.addJournal(
+                              titleController.text,
+                              contentController.text,
+                            );
+                            _journalController.reloadJournals();
+
+                            Get.back();
                             Get.snackbar(
-                              'Error',
-                              'Please fill all fields',
+                              'Success',
+                              'Journal entry created!',
                               snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: Colors.red,
+                              backgroundColor: Colors.green,
                               colorText: Colors.white,
                             );
-                            return;
-                          }
-
-                          _journalController.addJournal(
-                            titleController.text,
-                            contentController.text,
-                          );
-                          _journalController.reloadJournals();
-
-                          Get.back();
-                          Get.snackbar(
-                            'Success',
-                            'Journal entry created!',
-                            snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor: Colors.green,
-                            colorText: Colors.white,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.purple,
+                          ),
+                          child: const Text('Create', style: TextStyle(color: Colors.white)),
                         ),
-                        child: const Text('Create', style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -526,167 +563,161 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     ),
                   ),
                   padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'How are you feeling?',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                  child: SingleChildScrollView( // Wrap the Column in a SingleChildScrollView
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'How are you feeling?',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Camera detection section
-                      if (_isDetectingInDialog)
-                        Column(
-                          children: [
-                            Container(
-                              height: 150,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.purple),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: _cameraController != null && _cameraController!.value.isInitialized
-                                    ? CameraPreview(_cameraController!)
-                                    : Center(child: Text('Camera not available', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color))),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (_isDetectingEmotion)
-                              const CircularProgressIndicator()
-                            else if (_detectedEmotionInDialog.isNotEmpty)
-                              Text(
-                                'Detected emotion: $_detectedEmotionInDialog',
-                                style: TextStyle(
-                                  color: Colors.purple,
-                                  fontWeight: FontWeight.bold,
+                        const SizedBox(height: 16),
+                        if (_isDetectingInDialog)
+                          Column(
+                            children: [
+                              Container(
+                                height: 150,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.purple),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: _cameraController != null && _cameraController!.value.isInitialized
+                                      ? CameraPreview(_cameraController!)
+                                      : Center(child: Text('Camera not available', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color))),
                                 ),
                               ),
-                            const SizedBox(height: 16),
+                              const SizedBox(height: 8),
+                              if (_isDetectingEmotion)
+                                const CircularProgressIndicator()
+                              else if (_detectedEmotionInDialog.isNotEmpty)
+                                Text(
+                                  'Detected emotion: $_detectedEmotionInDialog',
+                                  style: TextStyle(
+                                    color: Colors.purple,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              const SizedBox(height: 16),
+                            ],
+                          ),
+
+                        // Mood selection using Wrap for responsiveness
+                        Wrap(
+                          spacing: 8.0,
+                          runSpacing: 8.0,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            _buildMoodOption('Happy', Icons.sentiment_very_satisfied, Colors.green, selectedMood, (value) {
+                              setState(() {
+                                selectedMood = value;
+                              });
+                            }),
+                            _buildMoodOption('Neutral', Icons.sentiment_neutral, Colors.amber, selectedMood, (value) {
+                              setState(() {
+                                selectedMood = value;
+                              });
+                            }),
+                            _buildMoodOption('Sad', Icons.sentiment_very_dissatisfied, Colors.blue, selectedMood, (value) {
+                              setState(() {
+                                selectedMood = value;
+                              });
+                            }),
+                            _buildMoodOption('Anxious', Icons.sentiment_very_dissatisfied, Colors.orange, selectedMood, (value) {
+                              setState(() {
+                                selectedMood = value;
+                              });
+                            }),
+                            _buildMoodOption('Excited', Icons.sentiment_very_satisfied, Colors.purple, selectedMood, (value) {
+                              setState(() {
+                                selectedMood = value;
+                              });
+                            }),
                           ],
                         ),
+                        const SizedBox(height: 16),
 
-                      // Mood selection - Expanded to include more options
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildMoodOption('Happy', Icons.sentiment_very_satisfied, Colors.green, selectedMood, (value) {
+                        // Camera detection button
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            if (_cameraController == null || !_cameraController!.value.isInitialized) {
+                              Get.snackbar('Error', 'Camera not available');
+                              return;
+                            }
                             setState(() {
-                              selectedMood = value;
+                              _isDetectingInDialog = true;
+                              _isDetectingEmotion = true;
                             });
-                          }),
-                          _buildMoodOption('Neutral', Icons.sentiment_neutral, Colors.amber, selectedMood, (value) {
+                            await Future.delayed(const Duration(seconds: 2));
+                            final emotionToMood = {
+                              'Happy': 'happy',
+                              'Sad': 'sad',
+                              'Neutral': 'neutral',
+                              'Anxious': 'anxious',
+                              'Excited': 'excited',
+                            };
+                            final emotions = ['Happy', 'Sad', 'Neutral', 'Anxious', 'Excited'];
+                            final randomEmotion = emotions[DateTime.now().millisecond % emotions.length];
                             setState(() {
-                              selectedMood = value;
+                              _detectedEmotionInDialog = randomEmotion;
+                              _isDetectingEmotion = false;
+                              selectedMood = emotionToMood[randomEmotion] ?? 'neutral';
                             });
-                          }),
-                          _buildMoodOption('Sad', Icons.sentiment_very_dissatisfied, Colors.blue, selectedMood, (value) {
-                            setState(() {
-                              selectedMood = value;
-                            });
-                          }),
-                          _buildMoodOption('Anxious', Icons.sentiment_very_dissatisfied, Colors.orange, selectedMood, (value) {
-                            setState(() {
-                              selectedMood = value;
-                            });
-                          }),
-                          _buildMoodOption('Excited', Icons.sentiment_very_satisfied, Colors.purple, selectedMood, (value) {
-                            setState(() {
-                              selectedMood = value;
-                            });
-                          }),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Camera detection button
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          if (_cameraController == null || !_cameraController!.value.isInitialized) {
-                            Get.snackbar('Error', 'Camera not available');
-                            return;
-                          }
-
-                          setState(() {
-                            _isDetectingInDialog = true;
-                            _isDetectingEmotion = true;
-                          });
-
-                          // Simulate emotion detection (replace with actual ML model)
-                          await Future.delayed(const Duration(seconds: 2));
-
-                          // Map detected emotions to mood options
-                          final emotionToMood = {
-                            'Happy': 'happy',
-                            'Sad': 'sad',
-                            'Neutral': 'neutral',
-                            'Anxious': 'anxious',
-                            'Excited': 'excited',
-                          };
-
-                          final emotions = ['Happy', 'Sad', 'Neutral', 'Anxious', 'Excited'];
-                          final randomEmotion = emotions[DateTime.now().millisecond % emotions.length];
-
-                          setState(() {
-                            _detectedEmotionInDialog = randomEmotion;
-                            _isDetectingEmotion = false;
-                            selectedMood = emotionToMood[randomEmotion] ?? 'neutral';
-                          });
-                        },
-                        icon: Icon(Icons.camera_alt, color: Colors.white),
-                        label: Text('Detect Emotion from Camera', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      TextField(
-                        controller: noteController,
-                        style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          },
+                          icon: Icon(Icons.camera_alt, color: Colors.white),
+                          label: Text('Detect Emotion from Camera', style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.purple,
                           ),
-                          labelText: 'Optional note',
-                          labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
-                          filled: true,
-                          fillColor: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.1),
                         ),
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          TextButton(
-                            onPressed: () => Get.back(),
-                            child: Text('Cancel', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              _moodController.addMoodEntry(selectedMood.toLowerCase(), note: noteController.text.isNotEmpty ? noteController.text : null);
-                              Get.back();
-                              _moodController.reloadMoods();
-                              Get.snackbar(
-                                'Success',
-                                'Mood logged successfully!',
-                                snackPosition: SnackPosition.BOTTOM,
-                                backgroundColor: Colors.green,
-                                colorText: Colors.white,
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.purple,
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: noteController,
+                          style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Text('Add Mood', style: TextStyle(color: Colors.white)),
+                            labelText: 'Optional note',
+                            labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                            filled: true,
+                            fillColor: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.1),
                           ),
-                        ],
-                      ),
-                    ],
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            TextButton(
+                              onPressed: () => Get.back(),
+                              child: Text('Cancel', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                _moodController.addMoodEntry(selectedMood.toLowerCase(), note: noteController.text.isNotEmpty ? noteController.text : null);
+                                Get.back();
+                                _moodController.reloadMoods();
+                                Get.snackbar(
+                                  'Success',
+                                  'Mood logged successfully!',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: Colors.green,
+                                  colorText: Colors.white,
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple,
+                              ),
+                              child: const Text('Add Mood', style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -932,7 +963,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     return _buildGlassContainer(
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.6,
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
         ),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -969,8 +1000,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                 ],
               ),
               const SizedBox(height: 16),
-
-
               if (_isCameraActive && _cameraController != null && _cameraController!.value.isInitialized)
                 Column(
                   children: [
@@ -991,7 +1020,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     else if (_detectedEmotion.isNotEmpty)
                       Text(
                         'Detected emotion: $_detectedEmotion',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.purple,
                           fontWeight: FontWeight.bold,
                         ),
@@ -999,7 +1028,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     const SizedBox(height: 16),
                   ],
                 ),
-
               // Chat conversation
               Expanded(
                 child: Obx(() => ListView.builder(
@@ -1012,7 +1040,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   },
                 )),
               ),
-
               if (_isGeneratingResponse)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8.0),
@@ -1029,7 +1056,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     ],
                   ),
                 ),
-
               const SizedBox(height: 16),
               // Replace your current Row with the text field and button with this:
               Row(

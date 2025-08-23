@@ -147,6 +147,8 @@ class JournalListScreen extends StatelessWidget {
       },
       onDismissed: (direction) {
         _journalController.deleteJournal(journal.id);
+        _journalController.isLoading.value=false;
+        _journalController.reloadJournals();
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -195,12 +197,58 @@ class JournalListScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                trailing: IconButton(
-                  icon: Icon(Icons.edit,
-                      color: _themeController.themeMode.value == ThemeMode.dark ? Colors.blue : Colors.purple),
-                  onPressed: () {
-                    _showAddEditJournalDialog(journal: journal);
-                  },
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.edit,
+                          color: _themeController.themeMode.value == ThemeMode.dark ? Colors.blue : Colors.purple),
+                      onPressed: () {
+                        _showAddEditJournalDialog(journal: journal);
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete,
+                          color: _themeController.themeMode.value == ThemeMode.dark ? Colors.red[300] : Colors.red),
+                      onPressed: () {
+                        // Show confirmation dialog for delete
+                        showDialog(
+                          context: Get.context!,
+                          builder: (context) => AlertDialog(
+                            backgroundColor: _themeController.themeMode.value == ThemeMode.dark
+                                ? const Color(0xFF2D2E40)
+                                : Colors.white,
+                            title: Text('Confirm Delete',
+                                style: TextStyle(
+                                    color: _themeController.themeMode.value == ThemeMode.dark ? Colors.white : Colors.black
+                                )),
+                            content: Text('Are you sure you want to delete this journal entry?',
+                                style: TextStyle(
+                                    color: _themeController.themeMode.value == ThemeMode.dark ? Colors.white70 : Colors.grey
+                                )),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Get.back(),
+                                child: Text('Cancel',
+                                    style: TextStyle(
+                                        color: _themeController.themeMode.value == ThemeMode.dark ? Colors.white70 : Colors.grey
+                                    )),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  _journalController.deleteJournal(journal.id);
+                                  _journalController.isLoading.value=false;
+                                  _journalController.reloadJournals();
+                                  Get.back();
+                                },
+                                child: Text('Delete', style: TextStyle(color: Colors.red)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
                 onTap: () {
                   _showJournalDetailDialog(journal);
@@ -328,14 +376,19 @@ class JournalListScreen extends StatelessWidget {
                               titleController.text,
                               contentController.text,
                             );
+                            _journalController.isLoading.value=false;
+                            _journalController.reloadJournals();
                           } else {
                             _journalController.updateJournal(
                               journal.id,
                               titleController.text,
                               contentController.text,
                             );
+                            _journalController.isLoading.value=false;
+                            _journalController.reloadJournals();
                           }
-
+                          _journalController.isLoading.value=false;
+                          _journalController.reloadJournals();
                           Get.back();
                         },
                         style: ElevatedButton.styleFrom(
