@@ -6,7 +6,7 @@ class AppConstants {
   );
   static const String geminiApiKey = String.fromEnvironment(
        'GEMINI_API_KEY',
-       defaultValue:"AIzaSyCLnPJVDM7myK2qzCiNO6GLGM4qYZMb4CA"
+       defaultValue:env.geminiApiKey
   );
 
 }
